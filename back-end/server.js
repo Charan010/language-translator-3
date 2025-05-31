@@ -8,20 +8,25 @@ const logger = require("./logger");
 const mongoose = require("mongoose");
 const MongoStore = require('connect-mongo');
 const { default: axios } = require("axios");
+const { default: cluster } = require("cluster");
 require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 const isProduction = process.env.NODE_ENV === 'production';
 const HG_API_TOKEN = process.env.HG_API_TOKEN;
+const UserName = process.env.MONGODB_USERNAME
+const Password = process.env.MONGODB_PASSWORD
+const Cluster = process.env.CLUSTER
+const DBname = process.env.DBNAME   
 
 
 const connectDB = async () => {
   try {
-    const username = 'admin';
-    const password = encodeURIComponent('Ar@020407');
-    const cluster = 'cluster0.y33awui.mongodb.net';
-    const dbName = 'translatorDB';
+    const username = UserName;
+    const password = encodeURIComponent(Password);
+    const cluster = Cluster;
+    const dbName = DBname;
     
     const mongoUrl = `mongodb+srv://${username}:${password}@${cluster}/${dbName}?retryWrites=true&w=majority`;
     
