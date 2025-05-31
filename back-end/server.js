@@ -14,11 +14,11 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 10000;
 const isProduction = process.env.NODE_ENV === 'production';
-const HG_API_TOKEN = process.env.HG_API_TOKEN;
 const UserName = process.env.MONGODB_USERNAME
 const Password = process.env.MONGODB_PASSWORD
 const Cluster = process.env.CLUSTER
-const DBname = process.env.DBNAME   
+const DBname = process.env.DBNAME
+const HG_API_TOKEN = process.env.HG_TOKEN   
 
 
 const connectDB = async () => {
@@ -332,6 +332,10 @@ app.get("/saved-translations", isAuthenticated, async (req, res) => {
 
 //adding this mf.
 app.post("/api/translate", async (req, res) => {
+
+  console.log("HG_API_TOKEN:", HG_API_TOKEN?.slice(0, 10) + "...");
+
+  
   const { text, srcLang, tgtLang } = req.body;
 
   if (!text || !srcLang || !tgtLang) {
