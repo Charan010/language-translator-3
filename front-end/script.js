@@ -23,13 +23,11 @@ function showLoading(isLoading) {
   }
 }
 
-// Helper function to display translation
 function displayTranslation(original, translated) {
   document.getElementById("text-input").value = original;
   document.getElementById("translated-text").value = translated;
 }
 
-// Helper function to show errors
 function showError(message) {
   const translatedTextElement = document.getElementById("translated-text");
   translatedTextElement.value = `Error: ${message}`;
@@ -38,7 +36,6 @@ function showError(message) {
   alert(message);
 }
 
-// Helper function to check if user is logged in
 function getCookie(name) {
   const cookies = document.cookie.split(';').map(c => c.trim());
   for (const cookie of cookies) {
@@ -54,7 +51,6 @@ function isUserLoggedIn() {
   return sessionCookie !== null && sessionCookie !== '';
 }
 
-// Helper function to save translation to history
 async function saveTranslationToHistory(original, translated) {
   try {
     await fetch('/save-translation', {
@@ -69,117 +65,7 @@ async function saveTranslationToHistory(original, translated) {
   }
 }
 
-// Translation service functions
-async function translateWithLibreTranslate(text) {
-  const response = await fetch("https://libretranslate.de/translate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ 
-      q: text,
-      source: "en",
-      target: "te",
-      format: "text"
-    }),
-  });
-  
-  if (!response.ok) {
-    throw new Error(`LibreTranslate error: ${response.status}`);
-  }
-  
-  const data = await response.json();
-  return data.translatedText;
-}
 
-async function translateWithMyMemory(text) {
-  const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|te`);
-  
-  if (!response.ok) {
-    throw new Error(`MyMemory error: ${response.status}`);
-  }
-  
-  const data = await response.json();
-  if (data.responseStatus === 200) {
-    return data.responseData.translatedText;
-  } else {
-    throw new Error("MyMemory translation failed");
-  }
-}
-
-async function translateWithLinguee(text) {
-  try {
-    // Using a public translation API
-    const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=te&dt=t&q=${encodeURIComponent(text)}`);
-    
-    if (!response.ok) {
-      throw new Error(`Google Translate error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data[0][0][0];
-  } catch (error) {
-    throw new Error("Google Translate service unavailable");
-  }
-}
-
-// Fallback translation function using simple word mapping
-function getFallbackTranslation(text) {
-  const basicTranslations = {
-    'hello': 'హలో',
-    'hi': 'హాయ్',
-    'good morning': 'శుభోదయం',
-    'good evening': 'శుభ సాయంత్రం',
-    'good night': 'శుభ రాత్రి',
-    'thank you': 'ధన్యవాదాలు',
-    'thanks': 'ధన్యవాదాలు',
-    'please': 'దయచేసి',
-    'sorry': 'క్షమించండి',
-    'yes': 'అవును',
-    'no': 'లేదు',
-    'water': 'నీరు',
-    'food': 'ఆహారం',
-    'house': 'ఇల్లు',
-    'family': 'కుటుంబం',
-    'friend': 'మిత్రుడు',
-    'love': 'ప్రేమ',
-    'time': 'సమయం',
-    'day': 'రోజు',
-    'night': 'రాత్రి',
-    'sun': 'సూర్యుడు',
-    'moon': 'చంద్రుడు',
-    'book': 'పుస్తకం',
-    'school': 'పాఠశాల',
-    'work': 'పని',
-    'money': 'డబ్బు',
-    'happy': 'సంతోషంగా',
-    'sad': 'దుఃఖంగా',
-    'good': 'మంచి',
-    'bad': 'చెడు',
-    'big': 'పెద్ద',
-    'small': 'చిన్న',
-    'hot': 'వేడిమిగా',
-    'cold': 'చల్లగా'
-  };
-  
-  const lowerText = text.toLowerCase().trim();
-  
-  // Check for exact matches
-  if (basicTranslations[lowerText]) {
-    return basicTranslations[lowerText];
-  }
-  
-  // Check for partial matches
-  for (const [english, telugu] of Object.entries(basicTranslations)) {
-    if (lowerText.includes(english)) {
-      return `${telugu} (partial translation)`;
-    }
-  }
-  
-  return `${text} (translation not available - please try a different service)`;
-}
-
-// Main translation function with multiple fallbacks
 async function startTranslation() {
   const inputText = document.getElementById("text-input").value.trim();
 
@@ -189,66 +75,44 @@ async function startTranslation() {
   }
 
   try {
-    // Show loading state
     showLoading(true);
-    
-    let translatedText = null;
-    let serviceUsed = "";
-    
-    // Try LibreTranslate first
-    try {
-      translatedText = await translateWithLibreTranslate(inputText);
-      serviceUsed = "LibreTranslate";
-    } catch (error) {
-      console.log("LibreTranslate failed:", error.message);
+
+    const srcLang = "eng_Latn";
+    const tgtLang = "tel_Telu"
+
+    const response = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: inputText,
+        srcLang,
+        tgtLang,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to get translation from backend");
     }
-    
-    // If LibreTranslate fails, try MyMemory
-    if (!translatedText) {
-      try {
-        translatedText = await translateWithMyMemory(inputText);
-        serviceUsed = "MyMemory";
-      } catch (error) {
-        console.log("MyMemory failed:", error.message);
-      }
-    }
-    
-    // If MyMemory fails, try Google Translate
-    if (!translatedText) {
-      try {
-        translatedText = await translateWithLinguee(inputText);
-        serviceUsed = "Google Translate";
-      } catch (error) {
-        console.log("Google Translate failed:", error.message);
-      }
-    }
-    
-    // If all services fail, use fallback translation
-    if (!translatedText) {
-      translatedText = getFallbackTranslation(inputText);
-      serviceUsed = "Offline Dictionary";
-    }
-    
-    // Display the translation
+
+    const data = await response.json();
+    const translatedText = data.translatedText || "translation not available";
+
     displayTranslation(inputText, translatedText);
-    
-    // Show which service was used (optional - you can remove this)
-    console.log(`Translation provided by: ${serviceUsed}`);
-    
-    // Save to user's history (if logged in) - only save if it's a real translation
+    console.log("Translation provided by: NLLB-600M backend");
+
     if (isUserLoggedIn() && !translatedText.includes("translation not available")) {
       await saveTranslationToHistory(inputText, translatedText);
     }
-    
+
   } catch (error) {
-    // Final fallback if everything fails
-    console.error("All translation methods failed:", error);
+    console.error("Translation failed:", error);
     const fallbackTranslation = getFallbackTranslation(inputText);
     displayTranslation(inputText, fallbackTranslation);
   } finally {
     showLoading(false);
   }
 }
+
 
 function validateLogin() {
   const username = document.getElementById("username").value.trim();

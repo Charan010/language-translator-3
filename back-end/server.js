@@ -7,11 +7,13 @@ const rateLimit = require("express-rate-limit");
 const logger = require("./logger");
 const mongoose = require("mongoose");
 const MongoStore = require('connect-mongo');
+const { default: axios } = require("axios");
 require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 const isProduction = process.env.NODE_ENV === 'production';
+const HG_API_TOKEN = process.env.HG_API_TOKEN;
 
 
 const connectDB = async () => {
@@ -52,6 +54,7 @@ const UserSchema = new mongoose.Schema({
       english: { type: String, required: true },
       telugu: { type: String, required: true },
       createdAt: { type: Date, default: Date.now },
+      _id:false
     }
   ],
   savedTranslations: [
@@ -93,7 +96,6 @@ if (isProduction) {
   app.set('trust proxy', 1);
 }
 
-//rate limiting ip's to prevent dos attacks.
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: isProduction ? 100 : 1000,
@@ -102,7 +104,6 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Custom logger to log all requests from user to debug.
 app.use(logger);
 
 function isAuthenticated(req, res, next) {
@@ -225,6 +226,7 @@ app.post("/login", async (req, res) => {
       error: "server_error"
     });
   }
+
 });
 
 app.get("/current-user", (req, res) => {
@@ -233,6 +235,7 @@ app.get("/current-user", (req, res) => {
       username: req.session.user.username,
       authenticated: true
     });
+
   } else {
     res.json({ 
       username: null,
@@ -253,6 +256,7 @@ app.post("/logout", (req, res) => {
     res.json({ 
       message: "Logged out successfully",
       success: true
+
     });
   });
 });
@@ -270,38 +274,27 @@ app.post("/save-translation", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const isDuplicate = user.translations.some(t =>
+      t.english === english && t.telugu === telugu
+    );
+
+    if (isDuplicate) {
+      return res.status(409).json({
+        message: "Duplicate translation not stored to keep history clean"
+      });
+    }
+
     user.translations.push({ english, telugu });
     await user.save();
-    
+
     res.json({ message: "Translation saved to history" });
   } catch (err) {
     console.error("Error saving translation:", err);
     res.status(500).json({ message: "Error saving translation" });
   }
+
 });
 
-app.post("/save-to-saved", isAuthenticated, async (req, res) => {
-  const { english, telugu } = req.body;
-  
-  if (!english || !telugu) {
-    return res.status(400).json({ message: "Both English and Telugu text are required" });
-  }
-
-  try {
-    const user = await User.findOne({ username: req.session.user.username });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    user.savedTranslations.push({ english, telugu });
-    await user.save();
-    
-    res.json({ message: "Translation saved to saved list" });
-  } catch (err) {
-    console.error("Error saving translation:", err);
-    res.status(500).json({ message: "Error saving translation" });
-  }
-});
 
 app.get("/history", isAuthenticated, async (req, res) => {
   try {
@@ -331,6 +324,43 @@ app.get("/saved-translations", isAuthenticated, async (req, res) => {
   }
 });
 
+
+//adding this mf.
+app.post("/api/translate", async (req, res) => {
+  const { text, srcLang, tgtLang } = req.body;
+
+  if (!text || !srcLang || !tgtLang) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const response = await axios.post(
+      "https://api-inference.huggingface.co/models/facebook/nllb-200-distilled-600M",
+      {
+        inputs: text,
+        parameters: {
+          src_lang: srcLang,
+          tgt_lang: tgtLang,
+        }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${HG_API_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+      }
+    );
+
+    const translatedText = response.data?.[0]?.translation_text || "translation not available";
+
+    res.json({ translatedText });
+  } catch (error) {
+    console.error("Hugging Face translation error:", error.response?.data || error.message);
+    res.status(500).json({ error: "Translation failed" });
+  }
+});
+
+
 app.delete("/delete-history-item", isAuthenticated, async (req, res) => {
   const { index } = req.body;
   
@@ -348,7 +378,9 @@ app.delete("/delete-history-item", isAuthenticated, async (req, res) => {
     console.error("Error deleting history item:", err);
     res.status(500).json({ message: "Error deleting history item" });
   }
+
 });
+
 
 app.delete("/delete-saved-item", isAuthenticated, async (req, res) => {
   const { index } = req.body;
@@ -367,7 +399,9 @@ app.delete("/delete-saved-item", isAuthenticated, async (req, res) => {
     console.error("Error deleting saved item:", err);
     res.status(500).json({ message: "Error deleting saved item" });
   }
+
 });
+
 
 app.delete("/delete-history", isAuthenticated, async (req, res) => {
   try {
@@ -384,6 +418,7 @@ app.delete("/delete-history", isAuthenticated, async (req, res) => {
     console.error("Error deleting history:", err);
     res.status(500).json({ message: "Error deleting history" });
   }
+
 });
 
 app.delete("/delete-saved", isAuthenticated, async (req, res) => {
@@ -403,24 +438,6 @@ app.delete("/delete-saved", isAuthenticated, async (req, res) => {
   }
 });
 
-// Health check endpoint
-app.get("/health", async (req, res) => {
-  try {
-    await mongoose.connection.db.admin().ping();
-    res.status(200).json({ 
-      status: "healthy",
-      database: "connected",
-      timestamp: new Date()
-    });
-  } catch (err) {
-    res.status(503).json({ 
-      status: "unhealthy",
-      database: "disconnected",
-      error: err.message
-    });
-  }
-});
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ 
@@ -430,7 +447,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
 const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${isProduction ? 'Production' : 'Development'}`);
