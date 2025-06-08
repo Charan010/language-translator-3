@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign Up - Translator</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <script defer src="script.js"></script>
+  <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="page-header login-header">
+    <div class="logo-section">
+      <img src="images/logo.png" alt="Site Logo" class="site-logo" />
+      <span class="site-title">Entel</span>
+    </div>
+  </header>
+  
+  <div class="container login-container">
+    <h1>Create an account</h1>
+    <form class="login-form" onsubmit="return validateSignup();">
+      <div class="input-field">
+        <i class="fas fa-user-plus"></i>
+        <input type="text" id="new-username" placeholder="Create Username" />
+      </div>
+
+      <div class="input-field password-wrapper">
+        <i class="fas fa-lock"></i>
+        <input type="password" id="new-password" placeholder="Create Password" />
+        <div class="toggle-password" onclick="togglePassword('new-password', this);">
+          <i class="fas fa-eye"></i>
+        </div>
+      </div>
+
+      <div class="error" id="signup-error-msg"></div>
+
+      <button type="submit" class="login-btn">Sign Up</button>
+
+      <div class="signup-redirect">
+        Already have an account? <a href="login.html">Login</a>
+      </div>
+    </form>
+  </div>
+</body>
+</html>

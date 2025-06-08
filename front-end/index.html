@@ -1,60 +1,82 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Language Translator</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Language Translator</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link
+    rel="stylesheet", href="styles.css"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+  />
 </head>
-
 <body>
+  <header class="page-header">
+    <div class="logo-section">
+      <img src="images/logo.png" alt="Logo" class="site-logo" />
+      <h1 class="site-title">EnTel</h1>
+    </div>
+    <nav class="main-nav">
+      <span id="username-display" class="username-display">Loading...</span>
+      <button class="nav-btn" id="history-btn">
+        <i class="fas fa-history"></i> History
+      </button>
+      <button class="nav-btn" id="saved-btn">
+        <i class="fas fa-bookmark"></i> Saved
+      </button>
+      <button class="nav-btn" id="logout-btn">
+        <i class="fas fa-sign-out-alt"></i> Log Out
+      </button>
+    </nav>
+  </header>
 
-    <div class="container">
-        <h1>Language Translator</h1>
-        
-        <div class="input-container">
-            
-                <textarea id="text-input" placeholder="Type in English..."></textarea> 
-                <button onclick="startTranslation()"> Translate</button>
-            </div>
-
-        <h3>Translated Sentence:</h3>
-        <div class="output-container">
-            <textarea id="translated-text" placeholder="Telugu translation....." readonly></textarea>
-        </div>
+  <div class="container">
+    <h1>Language Translator</h1>
+    <div class="input-container">
+      <textarea id="text-input" placeholder="Type in English..."></textarea>
+      <button id="translate-btn">Translate</button>
     </div>
 
+    <h3>Translated Sentence:</h3>
+    <div class="output-container">
+      <textarea
+        id="translated-text"
+        placeholder="Telugu translation..."
+        readonly
+      ></textarea>
+      <div class="action-btns">
+        <button class="action-btn" id="copy-btn">
+          <i class="fas fa-copy"></i>
+        </button>
+        <button class="action-btn" id="bookmark-btn">
+          <i class="fas fa-bookmark"></i>
+        </button>
+      </div>
+    </div>
+  </div>
 
-    <script>
-        function startTranslation() {
-            const englishText = document.getElementById('text-input').value.trim();
-            if (!englishText) return;
-    
-            const teluguTranslation = "అనువాదం ఇక్కడ కనిపిస్తుంది...";
-    
-            typeWriterEffect(teluguTranslation);
-        }
-    
-        function typeWriterEffect(text) {
-            const output = document.getElementById('translated-text');
-            output.value = '';
-            let i = 0;
-            const speed = 50;
-    
-            function type() {
-                if (i < text.length) {
-                    output.value += text.charAt(i);
-                    i++;
-                    setTimeout(type, speed);
-                }
-            }
-    
-            type();
-        }
-    
-    </script>
-    
-    
-    
+  <div id="history-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" id="close-history">&times;</span>
+      <h2>Translation History</h2>
+      <ul id="history-list"></ul>
+      <button id="delete-history-btn" class="action-btn">
+        <i class="fas fa-trash-alt"></i> Delete History
+      </button>
+    </div>
+  </div>
+
+  <div id="saved-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" id="close-saved">&times;</span>
+      <h2>Saved Translations</h2>
+      <ul id="saved-list"></ul>
+      <button id="delete-saved-btn" class="action-btn">
+        <i class="fas fa-trash-alt"></i> Delete All Saved
+      </button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
